@@ -1,12 +1,10 @@
 #include <InternalTemperature.h>
-
+///#include <I2C.h>
 #include <Adafruit_MLX90393.h>
-
 #include <TeensyThreads.h>
 
-///#include <I2C.h>
 
-///Adafruit_MLX90393 magnetometer = Adafruit_MLX90393();
+
 #include <Wire.h>
 #include <SPI.h>
 #include <Adafruit_BME280.h>
@@ -16,9 +14,7 @@
 #define BME_MOSI 11
 #define BME_CS 10
 #define GPSSerial Serial1
-//include i2c
 
-//
 
 int redLED = 3;
 int greenLED = 4;
@@ -36,11 +32,6 @@ float temperature;
 Adafruit_BME280 bme;
 unsigned long delayTime;
 double launchzeroalt;
-
-
-
-
-
 
 
 void setup() {
@@ -84,11 +75,7 @@ void loop() {
     char c = GPSSerial.read();
     Serial.write(c);
   }
-
-
-
-  ///lcdPrint();
-  ///averageAlt();
+\
   Serial.println("-----------------------------------------------------");
   if ((bme.readTemperature() * 9 / 5 + 32) > 80) {
     digitalWrite(testLED, HIGH);
@@ -100,14 +87,12 @@ void loop() {
   // put your main code here, to run repeatedly:
   digitalWrite(redLED, HIGH);
 
-
   baroData();
   Serial.println("-----------------------------------------------------");
   delay(2000);
 
   digitalWrite(redLED, LOW);
   delay(50);
-
 
 }
 
