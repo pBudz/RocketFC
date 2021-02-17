@@ -3,7 +3,7 @@
 #include <Adafruit_MLX90393.h>
 
 #include <TeensyThreads.h>
-#include <LiquidCrystal.h>
+
 ///#include <I2C.h>
 
 ///Adafruit_MLX90393 magnetometer = Adafruit_MLX90393();
@@ -18,8 +18,8 @@
 #define GPSSerial Serial1
 //include i2c
 
-// 
-LiquidCrystal lcd(2,3,4,5,6,7);
+//
+
 int redLED = 3;
 int greenLED = 4;
 int yellowLED = 5;
@@ -47,43 +47,36 @@ void setup() {
   while (!Serial);
 
   // make this baud rate fast enough so we aren't waiting on it
-Serial.begin(115200);
+  Serial.begin(115200);
 
   // 9600 baud is the default rate for the Ultimate GPS
-GPSSerial.begin(9600);
-
-lcd.begin(16,2);
-
-unsigned status;
-Serial.begin(115200);   
-// default settings
-status = bme.begin();  
-// put your setup code here, to run once:
-pinMode(redLED, OUTPUT);
-pinMode(greenLED, OUTPUT);
-pinMode(yellowLED, OUTPUT);
-pinMode(testLED, OUTPUT);
-Serial.begin(9600);
-if (status){
-  digitalWrite(yellowLED, LOW);
-}
+  GPSSerial.begin(9600);
 
 
 
+  unsigned status;
+  Serial.begin(115200);
+  // default settings
+  status = bme.begin();
+  // put your setup code here, to run once:
+  pinMode(redLED, OUTPUT);
+  pinMode(greenLED, OUTPUT);
+  pinMode(yellowLED, OUTPUT);
+  pinMode(testLED, OUTPUT);
+  Serial.begin(9600);
+  if (status) {
+    digitalWrite(yellowLED, LOW);
+  }
 
 
-
-
-
-
-launchzeroalt = (bme.readPressure() / 100.0F);
+  launchzeroalt = (bme.readPressure() / 100.0F);
 }
 
 
 
 void loop() {
 
-if (Serial.available()) {
+  if (Serial.available()) {
     char c = Serial.read();
     GPSSerial.write(c);
   }
@@ -93,13 +86,13 @@ if (Serial.available()) {
   }
 
 
-  
+
   ///lcdPrint();
   ///averageAlt();
-Serial.println("-----------------------------------------------------");
-  if ((bme.readTemperature()*9/5 +32) > 80){
+  Serial.println("-----------------------------------------------------");
+  if ((bme.readTemperature() * 9 / 5 + 32) > 80) {
     digitalWrite(testLED, HIGH);
-  }  
+  }
   else {
     digitalWrite(testLED, LOW);
   }
@@ -114,45 +107,14 @@ Serial.println("-----------------------------------------------------");
 
   digitalWrite(redLED, LOW);
   delay(50);
-  /*
-digitalWrite(redLED,HIGH);
-digitalWrite(greenLED,LOW);
-digitalWrite(yellowLED,LOW);
-delay(250);
 
-
-digitalWrite(redLED,LOW);
-digitalWrite(greenLED,HIGH);
-digitalWrite(yellowLED,LOW);
-delay(250);
-
-digitalWrite(redLED,LOW);
-digitalWrite(greenLED,LOW);
-digitalWrite(yellowLED,HIGH);
-delay(250);
-*/
 
 }
 
 /*
-void lcdPrint(){
-  double temp = bme.readTemperature()*9/5 +32;
-  double alt = bme.readAltitude(launchzeroalt)*3.28084;
-  double hum = bme.readHumidity();
-  lcd.clear();
-  lcd.print(temp);
-  delay(2000);
-  lcd.clear();
-  lcd.print(alt);
-  delay(2000);
-  lcd.clear();
-  lcd.print(hum);
-  delay(2000);
-  lcd.clear();
 
-}
-*
-void averageAlt(){
+
+  void averageAlt(){
   double altArr[10];
   int i,j = 0;
   int len = sizeof(altArr);
@@ -164,39 +126,39 @@ void averageAlt(){
   for (j; j < 9; j++){
     avg = avg + altArr[j];
   }
- //Serial.print(avg/10);
- avg = 0;
+  //Serial.print(avg/10);
+  avg = 0;
 
-}
+  }
 */
 void baroData() {
 
-    digitalWrite(greenLED, HIGH);
-    Serial.print("Temperature = ");
-    Serial.print(bme.readTemperature()*9/5 +32);
-    Serial.println(" *F");
+  digitalWrite(greenLED, HIGH);
+  Serial.print("Temperature = ");
+  Serial.print(bme.readTemperature() * 9 / 5 + 32);
+  Serial.println(" *F");
 
-    Serial.print("Pressure = ");
+  Serial.print("Pressure = ");
 
-    Serial.print((bme.readPressure() / 100.0F)*0.03);
-    Serial.println(" inHg");
-    Serial.print((bme.readPressure()) / 100.0F);
-    Serial.println(" inMb");
+  Serial.print((bme.readPressure() / 100.0F) * 0.03);
+  Serial.println(" inHg");
+  Serial.print((bme.readPressure()) / 100.0F);
+  Serial.println(" inMb");
 
-    Serial.print("Approx. Altitude AGL = ");
-    Serial.print(bme.readAltitude(launchzeroalt)*3.28084);
-    Serial.println(" feet");
-    Serial.print("Approx. Altitude MSL = ");
-    Serial.print(bme.readAltitude(ALTITUDE_inHg)*3.28084);
-    Serial.println(" feet");
+  Serial.print("Approx. Altitude AGL = ");
+  Serial.print(bme.readAltitude(launchzeroalt) * 3.28084);
+  Serial.println(" feet");
+  Serial.print("Approx. Altitude MSL = ");
+  Serial.print(bme.readAltitude(ALTITUDE_inHg) * 3.28084);
+  Serial.println(" feet");
 
-    Serial.print("Humidity = ");
-    Serial.print(bme.readHumidity());
-    Serial.println(" %");
+  Serial.print("Humidity = ");
+  Serial.print(bme.readHumidity());
+  Serial.println(" %");
 
-    digitalWrite(greenLED, LOW);
-    Serial.print("CPUtemp: ");
-    Serial.print(InternalTemperature.readTemperatureC(), 1);
-    Serial.println("°C");
+  digitalWrite(greenLED, LOW);
+  Serial.print("CPUtemp: ");
+  Serial.print(InternalTemperature.readTemperatureC(), 1);
+  Serial.println("°C");
 
 }
