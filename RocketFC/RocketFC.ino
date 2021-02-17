@@ -2,9 +2,7 @@
 ///#include <I2C.h>
 #include <Adafruit_MLX90393.h>
 #include <TeensyThreads.h>
-
-
-
+#include <String.h>
 #include <Wire.h>
 #include <SPI.h>
 #include <Adafruit_BME280.h>
@@ -14,8 +12,6 @@
 #define BME_MOSI 11
 #define BME_CS 10
 #define GPSSerial Serial1
-
-
 int redLED = 3;
 int greenLED = 4;
 int yellowLED = 5;
@@ -32,8 +28,6 @@ float temperature;
 Adafruit_BME280 bme;
 unsigned long delayTime;
 double launchzeroalt;
-
-
 void setup() {
   while (!Serial);
 
@@ -67,15 +61,7 @@ void setup() {
 
 void loop() {
 
-  if (Serial.available()) {
-    char c = Serial.read();
-    GPSSerial.write(c);
-  }
-  if (GPSSerial.available()) {
-    char c = GPSSerial.read();
-    Serial.write(c);
-  }
-\
+  GPS();
   Serial.println("-----------------------------------------------------");
   if ((bme.readTemperature() * 9 / 5 + 32) > 80) {
     digitalWrite(testLED, HIGH);
@@ -116,6 +102,30 @@ void loop() {
 
   }
 */
+void GPS() {
+
+  char j;
+do{/*
+  if (Serial.available()) {
+        char c = Serial.read();
+        j=c;
+        GPSSerial.write(c);
+      }
+      */
+      if (GPSSerial.available()) {
+        char c = GPSSerial.read();
+        j = c;
+        Serial.write(c);
+       
+      
+}while (j != "G");
+return 0;
+   
+      
+    
+
+}
+
 void baroData() {
 
   digitalWrite(greenLED, HIGH);
