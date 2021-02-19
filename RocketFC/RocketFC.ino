@@ -1,4 +1,5 @@
 #include <InternalTemperature.h>
+#include <ArduinoJson.h>
 ///#include <I2C.h>
 #include <Adafruit_MLX90393.h>
 #include <TeensyThreads.h>
@@ -7,6 +8,8 @@
 #include <SPI.h>
 #include <Adafruit_BME280.h>
 #include <Adafruit_Sensor.h>
+#include <SD.h>
+
 #define BME_SCK 13
 #define BME_MISO 12
 #define BME_MOSI 11
@@ -24,12 +27,41 @@ float temperature;
 
 #define ALTITUDE_inHg (30.07*33.864)//check nearest airfield or weather 
 //station for local curent air pressure.
-
+const int chipSelect = BUILTIN_SDCARD;
 Adafruit_BME280 bme;
 unsigned long delayTime;
 double launchzeroalt;
+File myFile;
+
+//todo
+StaticJsonBuffer<200> jsonBuffer;
+
 void setup() {
+  
+char json[] = "{\"sensor\":\"gps\",\"time\":1351824120,\"data\":[48.756080,2.302038]}";   
+JsonObject& root = jsonBuffer.parseObject(json);
+
+const char* sensor = root["sensor"];
+long time = root["time"];
+double latitude = root["data"][0];
+double longitude = root["data"][1];
+//todo
+  Serial.begin(9600);
+  while (!Serial) {
+    ; // wait for serial port to connect.
+  }
+
+
+  Serial.print("Initializing SD card...");
+
+  if (!SD.begin(chipSelect)) {
+    Serial.println("initialization failed!");
+    return;
+  }
+  Serial.println("initialization done.");
   while (!Serial);
+  myFile = SD.open("t.txt", FILE_WRITE);
+  
 
   // make this baud rate fast enough so we aren't waiting on it
   Serial.begin(115200);
@@ -41,9 +73,7 @@ void setup() {
 
   unsigned status;
   Serial.begin(115200);
-  // default settings
   status = bme.begin();
-  // put your setup code here, to run once:
   pinMode(redLED, OUTPUT);
   pinMode(greenLED, OUTPUT);
   pinMode(yellowLED, OUTPUT);
@@ -61,7 +91,7 @@ void setup() {
 
 void loop() {
 
-  GPS();
+  //GPS();
   Serial.println("-----------------------------------------------------");
   if ((bme.readTemperature() * 9 / 5 + 32) > 80) {
     digitalWrite(testLED, HIGH);
@@ -73,66 +103,44 @@ void loop() {
   // put your main code here, to run repeatedly:
   digitalWrite(redLED, HIGH);
 
-  baroData();
+ // baroData();
   Serial.println("-----------------------------------------------------");
   delay(2000);
 
   digitalWrite(redLED, LOW);
   delay(50);
+  if (myFile) {
+    for (int i = 0; i < 100; i++){
+    Serial.println("Writing to test.txt...");
+    myFile.print(bme.);
+    // close the file:
+    
+    Serial.println("done.");
+  }myFile.close();
+  }
 
 }
 
-/*
-
-
-  void averageAlt(){
-  double altArr[10];
-  int i,j = 0;
-  int len = sizeof(altArr);
-  double avg;
-  for (i; i < 9; i++){
-    altArr[i] = (bme.readPressure() / 100.0F)*0.03;
-
-  }
-  for (j; j < 9; j++){
-    avg = avg + altArr[j];
-  }
-  //Serial.print(avg/10);
-  avg = 0;
-
-  }
-*/
 void GPS() {
 
-  char j;
-do{/*
   if (Serial.available()) {
-        char c = Serial.read();
-        j=c;
-        GPSSerial.write(c);
-      }
-      */
-      if (GPSSerial.available()) {
-        char c = GPSSerial.read();
-        j = c;
-        Serial.write(c);
-       
-      
-}while (j != "G");
-return 0;
-   
-      
-    
+    char c = Serial.read();
+
+    GPSSerial.write(c);
+  }
+
+  char c = GPSSerial.read();
+
+  Serial.write(c);
 
 }
-
-void baroData() {
+char baroData() {
 
   digitalWrite(greenLED, HIGH);
   Serial.print("Temperature = ");
   Serial.print(bme.readTemperature() * 9 / 5 + 32);
+  
   Serial.println(" *F");
-
   Serial.print("Pressure = ");
 
   Serial.print((bme.readPressure() / 100.0F) * 0.03);
