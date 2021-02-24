@@ -34,17 +34,39 @@ double launchzeroalt;
 File myFile;
 
 //todo
-StaticJsonBuffer<200> jsonBuffer;
+
+
 
 void setup() {
-  
-char json[] = "{\"sensor\":\"gps\",\"time\":1351824120,\"data\":[48.756080,2.302038]}";   
-JsonObject& root = jsonBuffer.parseObject(json);
 
-const char* sensor = root["sensor"];
-long time = root["time"];
-double latitude = root["data"][0];
-double longitude = root["data"][1];
+char json[] = "{\"sensor\":\"gps\",\"time\":1351824120,\"data\":[48.756080,2.302038]}";     
+StaticJsonDocument<256> jsonDocument;  
+
+//JsonObject root = jsonDocument.parseObject(json);
+deserializeJson(jsonDocument, json);
+
+auto error = deserializeJson(jsonDocument, json);
+if (error) {
+    Serial.print(F("deserializeJson() failed with code "));
+    Serial.println(error.c_str());
+    return;
+}
+
+
+
+
+
+const char* sensor = jsonDocument["sensor"];
+long time = jsonDocument["time"];
+JsonArray data = jsonDocument["data"];
+double latitude = jsonDocument["data"][0];
+double longitude = jsonDocument["data"][1];
+
+Serial.println(sensor);
+Serial.println(time);
+Serial.println(data);
+Serial.println(latitude);
+Serial.println(longitude);
 //todo
   Serial.begin(9600);
   while (!Serial) {
@@ -112,7 +134,7 @@ void loop() {
   if (myFile) {
     for (int i = 0; i < 100; i++){
     Serial.println("Writing to test.txt...");
-    myFile.print(bme.);
+//    myFile.print(bme.);
     // close the file:
     
     Serial.println("done.");
