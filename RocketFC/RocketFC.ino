@@ -38,39 +38,37 @@ File myFile;
 
 
 void setup() {
-
-char json[] = "{\"sensor\":\"gps\",\"time\":1351824120,\"data\":[48.756080,2.302038]}";     
-StaticJsonDocument<256> jsonDocument;  
-
-//JsonObject root = jsonDocument.parseObject(json);
-deserializeJson(jsonDocument, json);
-
-auto error = deserializeJson(jsonDocument, json);
-if (error) {
-    Serial.print(F("deserializeJson() failed with code "));
-    Serial.println(error.c_str());
-    return;
-}
-
-
-
-
-
-const char* sensor = jsonDocument["sensor"];
-long time = jsonDocument["time"];
-JsonArray data = jsonDocument["data"];
-double latitude = jsonDocument["data"][0];
-double longitude = jsonDocument["data"][1];
-
-Serial.println(sensor);
-Serial.println(time);
-Serial.println(data);
-Serial.println(latitude);
-Serial.println(longitude);
-//todo
   Serial.begin(9600);
+  /*
+   * example json object
+  StaticJsonDocument<200> doc;
+  doc["sensor"] = "gps";
+  doc["time"] = 1351824120;
+  JsonArray data = doc.createNestedArray("data");
+  data.add(48.756080);
+  data.add(2.302038);
+  serializeJson(doc, Serial);
+  Serial.println();
+  serializeJsonPretty(doc, Serial);
+  */
+  
+  StaticJsonDocument<200> GPS;
+  GPS["sensor"] = "gps";
+  GPS["time"] = gps.millis()
+  StaticJsonDocument<200> BNO055;
+  StaticJsonDocument<200> BME280;
+  JsonArray data = doc.createNestedArray("data");
+  JsonArray data = doc.createNestedArray("data");
+  JsonArray data = doc.createNestedArray("data");
+  
+  
+  
+  
   while (!Serial) {
-    ; // wait for serial port to connect.
+    digitalWrite(greenLED, LOW);
+    digitalWrite(redLED, LOW);
+    digitalWrite(yellowLED, LOW);
+     // wait for serial port to connect.
   }
 
 
@@ -94,13 +92,11 @@ Serial.println(longitude);
 
 
   unsigned status;
-  Serial.begin(115200);
   status = bme.begin();
   pinMode(redLED, OUTPUT);
   pinMode(greenLED, OUTPUT);
   pinMode(yellowLED, OUTPUT);
   pinMode(testLED, OUTPUT);
-  Serial.begin(9600);
   if (status) {
     digitalWrite(yellowLED, LOW);
   }
@@ -142,6 +138,8 @@ void loop() {
   }
 
 }
+
+
 
 void GPS() {
 
