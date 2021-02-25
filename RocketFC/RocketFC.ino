@@ -39,36 +39,34 @@ File myFile;
 
 void setup() {
   Serial.begin(9600);
-  /*
-   * example json object
+//bm
+  // * example json object
   StaticJsonDocument<200> doc;
   doc["sensor"] = "gps";
   doc["time"] = 1351824120;
   JsonArray data = doc.createNestedArray("data");
   data.add(48.756080);
   data.add(2.302038);
-  serializeJson(doc, Serial);
-  Serial.println();
-  serializeJsonPretty(doc, Serial);
+  
+
+  /*
+    StaticJsonDocument<200> GPS;
+    GPS["sensor"] = "gps";
+    GPS["time"] = gps.millis()
+    StaticJsonDocument<200> BNO055;
+    StaticJsonDocument<200> BME280;
+    JsonArray data = doc.createNestedArray("data");
+    JsonArray data = doc.createNestedArray("data");
+    JsonArray data = doc.createNestedArray("data");
   */
-  
-  StaticJsonDocument<200> GPS;
-  GPS["sensor"] = "gps";
-  GPS["time"] = gps.millis()
-  StaticJsonDocument<200> BNO055;
-  StaticJsonDocument<200> BME280;
-  JsonArray data = doc.createNestedArray("data");
-  JsonArray data = doc.createNestedArray("data");
-  JsonArray data = doc.createNestedArray("data");
-  
-  
-  
-  
+
+
+
   while (!Serial) {
     digitalWrite(greenLED, LOW);
     digitalWrite(redLED, LOW);
     digitalWrite(yellowLED, LOW);
-     // wait for serial port to connect.
+    // wait for serial port to connect.
   }
 
 
@@ -81,7 +79,7 @@ void setup() {
   Serial.println("initialization done.");
   while (!Serial);
   myFile = SD.open("t.txt", FILE_WRITE);
-  
+
 
   // make this baud rate fast enough so we aren't waiting on it
   Serial.begin(115200);
@@ -101,10 +99,13 @@ void setup() {
     digitalWrite(yellowLED, LOW);
   }
 
-
+  serializeJson(doc, myFile);
+  Serial.println();
+  serializeJsonPretty(doc, myFile);
+  myFile.close();
   launchzeroalt = (bme.readPressure() / 100.0F);
 }
-
+//bm
 
 
 void loop() {
@@ -121,21 +122,23 @@ void loop() {
   // put your main code here, to run repeatedly:
   digitalWrite(redLED, HIGH);
 
- // baroData();
+  // baroData();
   Serial.println("-----------------------------------------------------");
   delay(2000);
 
   digitalWrite(redLED, LOW);
   delay(50);
+  /*
   if (myFile) {
-    for (int i = 0; i < 100; i++){
-    Serial.println("Writing to test.txt...");
-//    myFile.print(bme.);
-    // close the file:
-    
-    Serial.println("done.");
-  }myFile.close();
+    for (int i = 0; i < 100; i++) {
+      Serial.println("Writing to test.txt...");
+      //    myFile.print(bme.);
+      // close the file:
+
+      Serial.println("done.");
+    } myFile.close();
   }
+  */
 
 }
 
@@ -159,7 +162,7 @@ char baroData() {
   digitalWrite(greenLED, HIGH);
   Serial.print("Temperature = ");
   Serial.print(bme.readTemperature() * 9 / 5 + 32);
-  
+
   Serial.println(" *F");
   Serial.print("Pressure = ");
 
