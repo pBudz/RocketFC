@@ -1,4 +1,5 @@
 #include <InternalTemperature.h>
+#include <Adafruit_Sensor.h>
 #include <ArduinoJson.h>
 ///#include <I2C.h>
 #include <Adafruit_MLX90393.h>
@@ -7,7 +8,6 @@
 #include <Wire.h>
 #include <SPI.h>
 #include <Adafruit_BME280.h>
-#include <Adafruit_Sensor.h>
 #include <SD.h>
 
 #define BME_SCK 13
@@ -15,6 +15,7 @@
 #define BME_MOSI 11
 #define BME_CS 10
 #define GPSSerial Serial1
+
 int redLED = 3;
 int greenLED = 4;
 int yellowLED = 5;
@@ -34,25 +35,52 @@ double launchzeroalt;
 File myFile;
 
 //todo
-StaticJsonBuffer<200> jsonBuffer;
+StaticJsonDocument<50000> bme280;
+int correcttime; 
 
 void setup() {
-  
-char json[] = "{\"sensor\":\"gps\",\"time\":1351824120,\"data\":[48.756080,2.302038]}";   
-JsonObject& root = jsonBuffer.parseObject(json);
-
-const char* sensor = root["sensor"];
-long time = root["time"];
-double latitude = root["data"][0];
-double longitude = root["data"][1];
-//todo
   Serial.begin(9600);
+  /*
+//bm 
+  // * example json object
+  StaticJsonDocument<200> doc;
+  doc["sensor"] = "gps";
+  doc["time"] = 1351824120;
+  JsonArray data = doc.createNestedArray("data");
+  data.add(48.756080);
+  data.add(2.302038);
+  // * example json object
+
+  bme280["sensor"] = "atmo";
+  bme280["time"] = millis(); 
+  
+  JsonArray atmo = doc.createNestedArray("atmo");
+  atmo.add((bme.readPressure() / 100.0F) * 0.03);
+  
+/*
+    StaticJsonDocument<200> GPS;
+    GPS["sensor"] = "gps";
+    GPS["time"] = gps.millis()
+    StaticJsonDocument<200> BNO055;
+    StaticJsonDocument<200> BME280;
+    JsonArray data = doc.createNestedArray("data");
+    JsonArray data = doc.createNestedArray("data");
+    JsonArray data = doc.createNestedArray("data");
+  */
+
+
+
   while (!Serial) {
-    ; // wait for serial port to connect.
+    digitalWrite(greenLED, LOW);
+    digitalWrite(redLED, LOW);
+    digitalWrite(yellowLED, LOW);
+    // wait for serial port to connect.
   }
 
 
-  Serial.print("Initializing SD card...");
+
+
+  Serial.print("Initializing SD card...");//Preps SD card for writing
 
   if (!SD.begin(chipSelect)) {
     Serial.println("initialization failed!");
@@ -61,7 +89,9 @@ double longitude = root["data"][1];
   Serial.println("initialization done.");
   while (!Serial);
   myFile = SD.open("t.txt", FILE_WRITE);
-  
+
+
+
 
   // make this baud rate fast enough so we aren't waiting on it
   Serial.begin(115200);
@@ -72,25 +102,36 @@ double longitude = root["data"][1];
 
 
   unsigned status;
-  Serial.begin(115200);
   status = bme.begin();
   pinMode(redLED, OUTPUT);
   pinMode(greenLED, OUTPUT);
   pinMode(yellowLED, OUTPUT);
   pinMode(testLED, OUTPUT);
-  Serial.begin(9600);
   if (status) {
     digitalWrite(yellowLED, LOW);
   }
 
-
   launchzeroalt = (bme.readPressure() / 100.0F);
+  correcttime = millis();
 }
+//bm
+JsonArray atmo = bme280.createNestedArray("atmo");
 
 
 
 void loop() {
-
+  
+  
+  //bme280["sensor"] = "atmo";
+ // bme280["time"] = millis()/1000; 
+  
+  atmo.add((bme.readPressure() / 100.0F) * 0.03);
+  atmo.add(bme.readTemperature() * 9 / 5 + 32);
+  atmo.add(bme.readAltitude(launchzeroalt) * 3.28084);
+  
+  atmo.add((millis()-correcttime)/1000);
+  atmo.add(" ");
+ 
   //GPS();
   Serial.println("-----------------------------------------------------");
   if ((bme.readTemperature() * 9 / 5 + 32) > 80) {
@@ -100,28 +141,31 @@ void loop() {
     digitalWrite(testLED, LOW);
   }
 
-  // put your main code here, to run repeatedly:
   digitalWrite(redLED, HIGH);
 
- // baroData();
+  // baroData();
   Serial.println("-----------------------------------------------------");
-  delay(2000);
+  delay(500);
 
   digitalWrite(redLED, LOW);
-  delay(50);
-  if (myFile) {
-    for (int i = 0; i < 100; i++){
-    Serial.println("Writing to test.txt...");
-    myFile.print(bme.);
-    // close the file:
-    
-    Serial.println("done.");
-  }myFile.close();
+  delay(500);
+  Serial.println(millis()-correcttime);
+  
+  if (myFile) {                         //code to write to microssd
+     if(millis()-correcttime >= 180000){
+      Serial.println("Writing to test.txt...");
+      serializeJsonPretty(bme280, myFile);
+      myFile.close();
+      Serial.println("done..");
+     } 
   }
+  
 
 }
 
-void GPS() {
+
+
+void GPS() { //function gets gps data. gps reads data as chars.
 
   if (Serial.available()) {
     char c = Serial.read();
@@ -134,12 +178,12 @@ void GPS() {
   Serial.write(c);
 
 }
-char baroData() {
+char baroData() { //function gets and formats output of atmospheric sensor. (bme280)
 
   digitalWrite(greenLED, HIGH);
   Serial.print("Temperature = ");
   Serial.print(bme.readTemperature() * 9 / 5 + 32);
-  
+
   Serial.println(" *F");
   Serial.print("Pressure = ");
 
