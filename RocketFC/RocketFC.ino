@@ -156,7 +156,7 @@ void loop() {
       Serial.println("Writing to test.txt...");
       serializeJsonPretty(bme280, myFile);
       myFile.close();
-      Serial.println("done..");
+      Serial.println("done.");
      } 
   }
   
