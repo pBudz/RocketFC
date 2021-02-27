@@ -35,7 +35,7 @@ double launchzeroalt;
 File myFile;
 
 //todo
-StaticJsonDocument<50000> bme280;
+StaticJsonDocument<256000> bme280;
 int correcttime; 
 
 void setup() {
@@ -145,14 +145,14 @@ void loop() {
 
   // baroData();
   Serial.println("-----------------------------------------------------");
-  delay(500);
+  delay(5);
 
   digitalWrite(redLED, LOW);
-  delay(500);
+  delay(5);
   Serial.println(millis()-correcttime);
   
   if (myFile) {                         //code to write to microssd
-     if(millis()-correcttime >= 180000){
+     if(millis()-correcttime >= 10000){
       Serial.println("Writing to test.txt...");
       serializeJsonPretty(bme280, myFile);
       myFile.close();
