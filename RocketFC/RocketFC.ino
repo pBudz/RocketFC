@@ -9,12 +9,16 @@
 #include <SPI.h>
 #include <Adafruit_BME280.h>
 #include <SD.h>
-
+#include <Adafruit_GPS.h>
 #define BME_SCK 13
 #define BME_MISO 12
 #define BME_MOSI 11
 #define BME_CS 10
 #define GPSSerial Serial1
+#define GPSECHO false
+
+
+Adafruit_GPS GPS(&GPSSerial);
 
 int redLED = 3;
 int greenLED = 4;
@@ -26,8 +30,8 @@ float humidity;
 float pressure;
 float temperature;
 
-#define ALTITUDE_inHg (30.07*33.864)//check nearest airfield or weather 
-//station for local curent air pressure.
+#define ALTITUDE_inHg (30.07*33.864)//check nearest airfield or weather station for local curent air pressure.
+
 const int chipSelect = BUILTIN_SDCARD;
 Adafruit_BME280 bme;
 unsigned long delayTime;
@@ -91,15 +95,15 @@ void setup() {
   myFile = SD.open("t.txt", FILE_WRITE);
 
 
-
-
-  // make this baud rate fast enough so we aren't waiting on it
   Serial.begin(115200);
 
   // 9600 baud is the default rate for the Ultimate GPS
   GPSSerial.begin(9600);
-
-
+  
+  GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
+  GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);
+  GPS.sendCommand(PGCMD_ANTENNA);
+  
 
   unsigned status;
   status = bme.begin();
@@ -114,14 +118,14 @@ void setup() {
   launchzeroalt = (bme.readPressure() / 100.0F);
   correcttime = millis();
 }
-//bm
+
 JsonArray atmo = bme280.createNestedArray("atmo");
 
 
 
 void loop() {
-  
-  
+
+  GPS1();
   //bme280["sensor"] = "atmo";
  // bme280["time"] = millis()/1000; 
   
@@ -132,7 +136,7 @@ void loop() {
   atmo.add((millis()-correcttime)/1000);
   atmo.add(" ");
  
-  //GPS();
+
   Serial.println("-----------------------------------------------------");
   if ((bme.readTemperature() * 9 / 5 + 32) > 80) {
     digitalWrite(testLED, HIGH);
@@ -145,11 +149,11 @@ void loop() {
 
   // baroData();
   Serial.println("-----------------------------------------------------");
-  delay(5);
+  delay(500);
 
   digitalWrite(redLED, LOW);
-  delay(5);
-  Serial.println(millis()-correcttime);
+  delay(500);
+ // Serial.println(millis()-correcttime);
   
   if (myFile) {                         //code to write to microssd
      if(millis()-correcttime >= 10000){
@@ -163,20 +167,19 @@ void loop() {
 
 }
 
-
-
-void GPS() { //function gets gps data. gps reads data as chars.
-
-  if (Serial.available()) {
-    char c = Serial.read();
-
-    GPSSerial.write(c);
+void GPS1(){
+  char c = GPS.read();
+  if (GPSECHO)
+    if (c) Serial.print(c);
+   if (GPS.newNMEAreceived()) {
+    Serial.println(GPS.lastNMEA());
+    if (!GPS.parse(GPS.lastNMEA()))
+    return;
+   }
+   if (GPS.fix) {
+      Serial.print("Location: ");
+      Serial.print(GPS.latitude, 4); Serial.print(GPS.lat);
   }
-
-  char c = GPSSerial.read();
-
-  Serial.write(c);
-
 }
 char baroData() { //function gets and formats output of atmospheric sensor. (bme280)
 
