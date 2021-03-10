@@ -16,7 +16,8 @@
 #define BME_CS 10
 #define GPSSerial Serial1
 #define GPSECHO false
-
+#include <Adafruit_BNO055.h>
+#include <utility/imumaths.h>
 
 Adafruit_GPS GPS(&GPSSerial);
 
@@ -31,9 +32,10 @@ float pressure;
 float temperature;
 
 #define ALTITUDE_inHg (30.07*33.864)//check nearest airfield or weather station for local curent air pressure.
-
+uint16_t BNO055_SAMPLERATE_DELAY_MS = 100;
 const int chipSelect = BUILTIN_SDCARD;
 Adafruit_BME280 bme;
+Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28);
 unsigned long delayTime;
 double launchzeroalt;
 File myFile;
@@ -44,6 +46,19 @@ int correcttime;
 
 void setup() {
   Serial.begin(9600);
+  Serial.begin(115200);
+  Serial.println("Orientation Sensor Test"); Serial.println("");
+
+  /* Initialise the sensor */
+  if (!bno.begin())
+  {
+    /* There was a problem detecting the BNO055 ... check your connections */
+    Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
+    while (1);
+  }
+
+  delay(1000);
+
   /*
 //bm 
   // * example json object
@@ -80,6 +95,7 @@ void setup() {
     digitalWrite(yellowLED, LOW);
     // wait for serial port to connect.
   }
+  
 
 
 
@@ -95,7 +111,7 @@ void setup() {
   myFile = SD.open("t.txt", FILE_WRITE);
 
 
-  Serial.begin(115200);
+  
 
   // 9600 baud is the default rate for the Ultimate GPS
   GPSSerial.begin(9600);
