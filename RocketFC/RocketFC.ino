@@ -26,6 +26,7 @@ int greenLED = 4;
 int yellowLED = 5;
 int testLED = 8;
 int count = 0;
+const int buzzer = 24;
 
 float humidity;
 float pressure;
@@ -41,13 +42,13 @@ double launchzeroalt;
 File myFile;
 
 //todo
-StaticJsonDocument<25000> bme280;
-StaticJsonDocument<256000> totallist;
-StaticJsonDocument<25000> acceler;
-StaticJsonDocument<25000> orientation;
-StaticJsonDocument<25000> linearacc;
-StaticJsonDocument<25000> magnetometer;
-StaticJsonDocument<25000> angvelocity;
+StaticJsonDocument<35000> bme280;
+StaticJsonDocument<225000> totallist;
+StaticJsonDocument<35000> acceler;
+StaticJsonDocument<35000> orientation;
+StaticJsonDocument<35000> linearacc;
+StaticJsonDocument<35000> magnetometer;
+StaticJsonDocument<35000> angvelocity;
 
 
 int correcttime;
@@ -59,6 +60,7 @@ void setup() {
   linearacc["Linear accel"] = "linear";
   magnetometer["magnetometer"] = "mag";
   angvelocity["angular velocity"] = "angvel";
+  pinMode(buzzer, OUTPUT);
   
   Serial.begin(9600);
   Serial.begin(115200);
@@ -124,7 +126,7 @@ JsonArray angvel = angvelocity.createNestedArray("angvel");
 
 
 void loop() {
-
+  timer = millis() - correcttime;
   sensors_event_t orientationData , angVelocityData , linearAccelData, magnetometerData, accelerometerData, gravityData;
   bno.getEvent(&orientationData, Adafruit_BNO055::VECTOR_EULER);
   bno.getEvent(&angVelocityData, Adafruit_BNO055::VECTOR_GYROSCOPE);
@@ -152,28 +154,35 @@ void loop() {
 
 //  Serial.println("--");
   delay(BNO055_SAMPLERATE_DELAY_MS);
-
+  digitalWrite(buzzer, LOW);
   atmo.add((bme.readPressure() / 100.0F) * 0.03);
   atmo.add(bme.readTemperature() * 9 / 5 + 32);
   atmo.add(bme.readAltitude(launchzeroalt) * 3.28084);
+  atmo.add(timer);
   orient.add(printEventOrientationX(&orientationData));
   orient.add(printEventOrientationY(&orientationData));
   orient.add(printEventOrientationZ(&orientationData));
+  orient.add(timer);
   linear.add(printEventLinearAccelerometerX(&linearAccelData));
   linear.add(printEventLinearAccelerometerY(&linearAccelData));
   linear.add(printEventLinearAccelerometerZ(&linearAccelData));
+  linear.add(timer);
   magnet.add(printEventMagneticX(&magnetometerData));
   magnet.add(printEventMagneticY(&magnetometerData));
   magnet.add(printEventMagneticZ(&magnetometerData));
+  magnet.add(timer);
   angvel.add(printRotationVectorX(&angVelocityData));
   angvel.add(printRotationVectorY(&angVelocityData));
   angvel.add(printRotationVectorZ(&angVelocityData));
+  angvel.add(timer);
   accel2.add(printEventAccelerometerX(&accelerometerData));
   accel2.add(printEventAccelerometerY(&accelerometerData));
   accel2.add(printEventAccelerometerZ(&accelerometerData));
+  accel2.add(timer);
 
   if (myFile) {                         //code to write to microssd
-    if (millis() - correcttime >= 10000) {
+    if (millis() - correcttime >= 1000) {
+      
       total.add(atmo);
       total.add(accel2);
       total.add(orient);
@@ -184,9 +193,13 @@ void loop() {
       serializeJsonPretty(totallist, myFile);
       myFile.close();
       Serial.println("done.");
+
+      while (millis() - correcttime >= 1000){
+        //tone(buzzer, 5000);
+      }
     }
   }
-
+  
 
 }
 
