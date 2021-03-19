@@ -41,10 +41,25 @@ double launchzeroalt;
 File myFile;
 
 //todo
-StaticJsonDocument<256000> bme280;
+StaticJsonDocument<25000> bme280;
+StaticJsonDocument<256000> totallist;
+StaticJsonDocument<25000> acceler;
+StaticJsonDocument<25000> orientation;
+StaticJsonDocument<25000> linearacc;
+StaticJsonDocument<25000> magnetometer;
+StaticJsonDocument<25000> angvelocity;
+
+
 int correcttime;
 
 void setup() {
+  bme280["atmospheric sensors"] = "atmo";
+  acceler["acceleration"] = "accel";
+  orientation["orientation"] = "orien";
+  linearacc["Linear accel"] = "linear";
+  magnetometer["magnetometer"] = "mag";
+  angvelocity["angular velocity"] = "angvel";
+  
   Serial.begin(9600);
   Serial.begin(115200);
   Serial.println("Orientation Sensor Test"); Serial.println("");
@@ -61,30 +76,6 @@ void setup() {
   delay(1000);
   bno.setExtCrystalUse(true);
 
-  /*
-    //bm
-    // * example json object
-    StaticJsonDocument<200> doc;
-    doc["sensor"] = "gps";
-    doc["time"] = 1351824120;
-    JsonArray data = doc.createNestedArray("data");
-    data.add(48.756080);
-    data.add(2.302038);
-    // * example json object
-    bme280["sensor"] = "atmo";
-    bme280["time"] = millis();
-    JsonArray atmo = doc.createNestedArray("atmo");
-    atmo.add((bme.readPressure() / 100.0F) * 0.03);
-    /*
-    StaticJsonDocument<200> GPS;
-    GPS["sensor"] = "gps";
-    GPS["time"] = gps.millis()
-    StaticJsonDocument<200> BNO055;
-    StaticJsonDocument<200> BME280;
-    JsonArray data = doc.createNestedArray("data");
-    JsonArray data = doc.createNestedArray("data");
-    JsonArray data = doc.createNestedArray("data");
-  */
   while (!Serial) {
     digitalWrite(greenLED, LOW);
     digitalWrite(redLED, LOW);
@@ -123,8 +114,14 @@ void setup() {
   launchzeroalt = (bme.readPressure() / 100.0F);
   correcttime = millis();
 }
-
+JsonArray total = totallist.createNestedArray("total");
 JsonArray atmo = bme280.createNestedArray("atmo");
+JsonArray accel2 = acceler.createNestedArray("accel2");
+JsonArray orient = orientation.createNestedArray("orient");
+JsonArray linear = linearacc.createNestedArray("linear");
+JsonArray magnet = magnetometer.createNestedArray("magnet");
+JsonArray angvel = angvelocity.createNestedArray("angvel");
+
 
 void loop() {
 
@@ -159,26 +156,32 @@ void loop() {
   atmo.add((bme.readPressure() / 100.0F) * 0.03);
   atmo.add(bme.readTemperature() * 9 / 5 + 32);
   atmo.add(bme.readAltitude(launchzeroalt) * 3.28084);
-  atmo.add(printEventAccelerometerX(&accelerometerData));
-  atmo.add(printEventAccelerometerY(&accelerometerData));
-  atmo.add(printEventAccelerometerZ(&accelerometerData));
-  atmo.add(printEventOrientationX(&orientationData));
-  atmo.add(printEventOrientationY(&orientationData));
-  atmo.add(printEventOrientationZ(&orientationData));
-  atmo.add(printEventLinearAccelerometerX(&linearAccelData));
-  atmo.add(printEventLinearAccelerometerY(&linearAccelData));
-  atmo.add(printEventLinearAccelerometerZ(&linearAccelData));
-  atmo.add(printEventMagneticX(&magnetometerData));
-  atmo.add(printEventMagneticY(&magnetometerData));
-  atmo.add(printEventMagneticZ(&magnetometerData));
-  atmo.add(printRotationVectorX(&angVelocityData));
-  atmo.add(printRotationVectorY(&angVelocityData));
-  atmo.add(printRotationVectorZ(&angVelocityData));
+  orient.add(printEventOrientationX(&orientationData));
+  orient.add(printEventOrientationY(&orientationData));
+  orient.add(printEventOrientationZ(&orientationData));
+  linear.add(printEventLinearAccelerometerX(&linearAccelData));
+  linear.add(printEventLinearAccelerometerY(&linearAccelData));
+  linear.add(printEventLinearAccelerometerZ(&linearAccelData));
+  magnet.add(printEventMagneticX(&magnetometerData));
+  magnet.add(printEventMagneticY(&magnetometerData));
+  magnet.add(printEventMagneticZ(&magnetometerData));
+  angvel.add(printRotationVectorX(&angVelocityData));
+  angvel.add(printRotationVectorY(&angVelocityData));
+  angvel.add(printRotationVectorZ(&angVelocityData));
+  accel2.add(printEventAccelerometerX(&accelerometerData));
+  accel2.add(printEventAccelerometerY(&accelerometerData));
+  accel2.add(printEventAccelerometerZ(&accelerometerData));
 
   if (myFile) {                         //code to write to microssd
-    if (millis() - correcttime >= 180000) {
+    if (millis() - correcttime >= 10000) {
+      total.add(atmo);
+      total.add(accel2);
+      total.add(orient);
+      total.add(linear);
+      total.add(magnet);
+      total.add(angvel);
       Serial.println("Writing to test.txt...");
-      serializeJsonPretty(bme280, myFile);
+      serializeJsonPretty(totallist, myFile);
       myFile.close();
       Serial.println("done.");
     }
@@ -308,80 +311,3 @@ double printRotationVectorZ(sensors_event_t* event){
     return z;   
 }
 }
-//double printGyroscopeX(sensors_event_t* event){
-//  double x = -1000000; //dumb values, easy to spot problem
-//  if (event->type == SENSOR_TYPE_GYROSCOPE) {
-//    x = event->magnetic.x;
-//    Serial.print(x);
-//    return x;  
-//}
-//}
-//double printGyroscopeY(sensors_event_t* event){
-//  double y = -1000000; //dumb values, easy to spot problem
-//  if (event->type == SENSOR_TYPE_GYROSCOPE) {
-//    y = event->magnetic.y;
-//    Serial.print(y);
-//    return y;  
-//}
-//}
-//double printGyroscopeZ(sensors_event_t* event){
-//  double z = -1000000; //dumb values, easy to spot problem
-//  if (event->type == SENSOR_TYPE_GYROSCOPE) {
-//    z = event->magnetic.z;
-//    Serial.print(z);
-//    return z;  
-//}
-//}
-//get grav and ang velocity
-//
-//
-//char printEvent(sensors_event_t* event) {
-//  double x = -1000000, y = -1000000 , z = -1000000; //dumb values, easy to spot problem
-//  if (event->type == SENSOR_TYPE_ACCELEROMETER) {
-//    Serial.print("Accl:");
-//    x = event->acceleration.x;
-//    y = event->acceleration.y;
-//    z = event->acceleration.z;
-//  }
-// 
-//  else if (event->type == SENSOR_TYPE_ORIENTATION) {
-//    Serial.print("Orient:");
-//    x = event->orientation.x;
-//    y = event->orientation.y;
-//    z = event->orientation.z;
-//  }
-//  else if (event->type == SENSOR_TYPE_MAGNETIC_FIELD) {
-//    Serial.print("Mag:");
-//    x = event->magnetic.x;
-//    y = event->magnetic.y;
-//    z = event->magnetic.z;
-//  }
-//  else if (event->type == SENSOR_TYPE_GYROSCOPE) {
-//    Serial.print("Gyro:");
-//    x = event->gyro.x;
-//    y = event->gyro.y;
-//    z = event->gyro.z;
-//  }
-//  else if (event->type == SENSOR_TYPE_ROTATION_VECTOR) {
-//    Serial.print("Rot:");
-//    x = event->gyro.x;
-//    y = event->gyro.y;
-//    z = event->gyro.z;
-//  }
-//  else if (event->type == SENSOR_TYPE_LINEAR_ACCELERATION) {
-//    Serial.print("Linear:");
-//    x = event->acceleration.x;
-//    y = event->acceleration.y;
-//    z = event->acceleration.z;
-//  }
-//  else {
-//    Serial.print("Unk:");
-//  }
-//
-//  Serial.print("\tx= ");
-//  Serial.print(x);
-//  Serial.print(" |\ty= ");
-//  Serial.print(y);
-//  Serial.print(" |\tz= ");
-//  Serial.println(z);
-//}
