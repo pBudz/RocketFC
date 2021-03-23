@@ -1,9 +1,9 @@
-///#include <I2C.h>
-//#include <TeensyThreads.h>
-//#include <String.h>
-//#include <Wire.h>
-//#include <SPI.h>
-//#include <InternalTemperature.h>
+//#include <I2C.h>
+#include <TeensyThreads.h>
+#include <String.h>
+#include <Wire.h>
+#include <SPI.h>
+#include <InternalTemperature.h>
 
 
 //------------------------------------------
@@ -24,7 +24,7 @@
 //------------------------------------------
 //BNO055 & math logic library for IMU's.
 #include <Adafruit_BNO055.h>
-//#include <utility/imumaths.h>
+#include <utility/imumaths.h>
 //------------------------------------------
 //------------------------------------------
 //GPS Libraries and definitions
@@ -64,7 +64,7 @@ JsonArray magnet = totallist.createNestedArray("magnet");
 JsonArray angvel = totallist.createNestedArray("angvel");
 
 int correcttime;
-
+int recordtime = 5000; //time in milliseconds you want to record data.
 void setup() {
   //------------------------------------------
   //instantiate
@@ -99,17 +99,19 @@ void setup() {
     return;
   }
   Serial.println("initialization done.");
-  while (!Serial);
+  //while (!Serial);
   myFile = SD.open("t.txt", FILE_WRITE);//change field 1 to whatever you want to name the file.. "example.txt"
 
   // 9600 baud is the default rate for the Ultimate GPS
-  GPSSerial.begin(9600);
-  GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
-  GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);
-  GPS.sendCommand(PGCMD_ANTENNA);
-  delay(1000);
-  GPSSerial.println(PMTK_Q_RELEASE);
-
+  //--------------------------------------------------------------
+  //gps code currently not in use
+//  GPSSerial.begin(9600);
+//  GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
+//  GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);
+//  GPS.sendCommand(PGCMD_ANTENNA);
+//  delay(1000);
+//  GPSSerial.println(PMTK_Q_RELEASE);
+ //--------------------------------------------------------------
   unsigned status;
   status = bme.begin();
   //if (status) {
@@ -156,6 +158,7 @@ void loop() {
   atmo.add((bme.readPressure() / 100.0F) * 0.03);
   atmo.add(bme.readTemperature() * 9 / 5 + 32);
   atmo.add(bme.readAltitude(launchzeroalt) * 3.28084);
+  Serial.println(bme.readAltitude(launchzeroalt) * 3.28084);
   atmo.add(timer);
   orient.add(printEventOrientationX(&orientationData));
   orient.add(printEventOrientationY(&orientationData));
@@ -179,14 +182,14 @@ void loop() {
   accel2.add(timer);
 
   if (myFile) {                         //code to write to microssd
-    if (millis() - correcttime >= 100000) {
+    if (millis() - correcttime >= recordtime) {
 
       Serial.println("Writing to test.txt...");
       serializeJsonPretty(totallist, myFile);
       myFile.close();
       Serial.println("done.");
 
-      while (millis() - correcttime >= 1000) {
+      while (millis() - correcttime >= recordtime) {
         //tone(buzzer, 5000);
       }
     }
@@ -194,7 +197,9 @@ void loop() {
 
 
 }
-
+//--------------------------------------------------------------
+// follow functions use previously declared sensor events to find what TYPE of event is detected. if the type is of the the- 
+// -type specified in the function, the function reports the appropriate data.
 double printEventAccelerometerX(sensors_event_t* event) {
   double x = -1000000; //dumb values, easy to spot problem
   if (event->type == SENSOR_TYPE_ACCELEROMETER) {
