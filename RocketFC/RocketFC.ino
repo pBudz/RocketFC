@@ -64,7 +64,7 @@ JsonArray magnet = totallist.createNestedArray("magnet");
 JsonArray angvel = totallist.createNestedArray("angvel");
 
 int correcttime;
-int recordtime = 5000; //time in milliseconds you want to record data.
+int recordtime = 100000; //time in milliseconds you want to record data.
 void setup() {
   //------------------------------------------
   //instantiate
