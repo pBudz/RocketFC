@@ -6,6 +6,7 @@
 #include <InternalTemperature.h>
 
 
+
 //------------------------------------------
 //CORE libraries for hardware interface
 #include <Adafruit_Sensor.h>
@@ -25,6 +26,7 @@
 //BNO055 & math logic library for IMU's.
 #include <Adafruit_BNO055.h>
 #include <utility/imumaths.h>
+#include <EEPROM.h>
 //------------------------------------------
 //------------------------------------------
 //GPS Libraries and definitions
@@ -35,7 +37,9 @@ Adafruit_GPS GPS(&GPSSerial);
 //------------------------------------------
 uint32_t timer = millis();
 
-const int buzzer = 24;
+const int buzzer = 32;
+const int yellowLED = 30;
+const int redLED = 31;
 
 float humidity;
 float pressure;
@@ -64,13 +68,15 @@ JsonArray magnet = totallist.createNestedArray("magnet");
 JsonArray angvel = totallist.createNestedArray("angvel");
 
 int correcttime;
-int recordtime = 100000; //time in milliseconds you want to record data.
+int recordtime = 110000; //time in milliseconds you want to record data.
 void setup() {
   //------------------------------------------
   //instantiate
 
   //------------------------------------------
   pinMode(buzzer, OUTPUT);
+  pinMode(redLED, OUTPUT);
+  pinMode(yellowLED, OUTPUT);
 
   Serial.begin(9600);
   Serial.begin(115200);
@@ -120,6 +126,44 @@ void setup() {
 
   launchzeroalt = (bme.readPressure() / 100.0F);
   correcttime = millis();
+
+  int eeAddress = 0;
+  long bnoID;
+  bool foundCalib = false;
+
+  EEPROM.get(eeAddress, bnoID);
+
+    adafruit_bno055_offsets_t calibrationData;
+    sensor_t sensor;
+
+    /*
+    *  Look for the sensor's unique ID at the beginning oF EEPROM.
+    *  This isn't foolproof, but it's better than nothing.
+    */
+    bno.getSensor(&sensor);
+    if (bnoID != sensor.sensor_id)
+    {
+        Serial.println("\nNo Calibration Data for this sensor exists in EEPROM");
+        delay(500);
+    }
+    else
+    {
+        Serial.println("\nFound Calibration for this sensor in EEPROM.");
+        eeAddress += sizeof(long);
+        EEPROM.get(eeAddress, calibrationData);
+
+        displaySensorOffsets(calibrationData);
+
+        Serial.println("\n\nRestoring Calibration data to the BNO055...");
+        bno.setSensorOffsets(calibrationData);
+
+        Serial.println("\n\nCalibration data loaded into BNO055");
+        foundCalib = true;
+    }
+    bno.setExtCrystalUse(true);
+
+
+  
 }
 
 
@@ -142,17 +186,21 @@ void loop() {
 
   uint8_t system, gyro, accel, mag = 0;
   bno.getCalibration(&system, &gyro, &accel, &mag);
-  //  Serial.println();
-  //  Serial.print("Calibration: Sys=");
-  //  Serial.print(system);
-  //  Serial.print(" Gyro=");
-  //  Serial.print(gyro);
-  //  Serial.print(" Accel=");
-  //  Serial.print(accel);
-  //  Serial.print(" Mag=");
-  //  Serial.println(mag);
+    Serial.println();
+    Serial.print("Calibration: Sys=");
+    Serial.print(system);
+    Serial.print(" Gyro=");
+    Serial.print(gyro);
+    Serial.print(" Accel=");
+    Serial.print(accel);
+    Serial.print(" Mag=");
+    Serial.println(mag);
 
   //  Serial.println("--");
+  if(accel == 3 ){
+    tone(buzzer, 2000);
+    digitalWrite(yellowLED, HIGH);
+  }
   delay(BNO055_SAMPLERATE_DELAY_MS);
   digitalWrite(buzzer, LOW);
   atmo.add((bme.readPressure() / 100.0F) * 0.03);
@@ -190,7 +238,7 @@ void loop() {
       Serial.println("done.");
 
       while (millis() - correcttime >= recordtime) {
-        //tone(buzzer, 5000);
+        digitalWrite(redLED, HIGH);
       }
     }
   }
@@ -320,4 +368,54 @@ double printRotationVectorZ(sensors_event_t* event) {
     //  Serial.print(z);
     return z;
   }
+}
+
+void displaySensorOffsets(const adafruit_bno055_offsets_t &calibData)
+{
+    Serial.print("Accelerometer: ");
+    Serial.print(calibData.accel_offset_x); Serial.print(" ");
+    Serial.print(calibData.accel_offset_y); Serial.print(" ");
+    Serial.print(calibData.accel_offset_z); Serial.print(" ");
+
+    Serial.print("\nGyro: ");
+    Serial.print(calibData.gyro_offset_x); Serial.print(" ");
+    Serial.print(calibData.gyro_offset_y); Serial.print(" ");
+    Serial.print(calibData.gyro_offset_z); Serial.print(" ");
+
+    Serial.print("\nMag: ");
+    Serial.print(calibData.mag_offset_x); Serial.print(" ");
+    Serial.print(calibData.mag_offset_y); Serial.print(" ");
+    Serial.print(calibData.mag_offset_z); Serial.print(" ");
+
+    Serial.print("\nAccel Radius: ");
+    Serial.print(calibData.accel_radius);
+
+    Serial.print("\nMag Radius: ");
+    Serial.print(calibData.mag_radius);
+}
+void displayCalStatus(void)
+{
+    /* Get the four calibration values (0..3) */
+    /* Any sensor data reporting 0 should be ignored, */
+    /* 3 means 'fully calibrated" */
+    uint8_t system, gyro, accel, mag;
+    system = gyro = accel = mag = 0;
+    bno.getCalibration(&system, &gyro, &accel, &mag);
+
+    /* The data should be ignored until the system calibration is > 0 */
+    Serial.print("\t");
+    if (!system)
+    {
+        Serial.print("! ");
+    }
+
+    /* Display the individual values */
+    Serial.print("Sys:");
+    Serial.print(system, DEC);
+    Serial.print(" G:");
+    Serial.print(gyro, DEC);
+    Serial.print(" A:");
+    Serial.print(accel, DEC);
+    Serial.print(" M:");
+    Serial.print(mag, DEC);
 }
