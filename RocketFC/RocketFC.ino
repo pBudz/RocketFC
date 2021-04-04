@@ -68,7 +68,7 @@ JsonArray magnet = totallist.createNestedArray("magnet");
 JsonArray angvel = totallist.createNestedArray("angvel");
 
 int correcttime;
-int recordtime = 110000; //time in milliseconds you want to record data.
+int recordtime = 122000; //time in milliseconds you want to record data.
 void setup() {
   //------------------------------------------
   //instantiate
@@ -82,10 +82,10 @@ void setup() {
   Serial.begin(115200);
   Serial.println("Orientation Sensor Test"); Serial.println("");
 
-  /* Initialise the sensor */
+
   if (!bno.begin())
   {
-    /* There was a problem detecting the BNO055 ... check your connections */
+
     Serial.print("no BNO055 detected");
     while (1);
   }
@@ -94,10 +94,6 @@ void setup() {
   delay(1000);
   bno.setExtCrystalUse(true);
 
- // while (!Serial) {
-
-    // wait for serial port to connect.
-  //}
   Serial.print("Initializing SD card...");//Preps SD card for writing
 
   if (!SD.begin(chipSelect)) {
@@ -108,21 +104,8 @@ void setup() {
   //while (!Serial);
   myFile = SD.open("t.txt", FILE_WRITE);//change field 1 to whatever you want to name the file.. "example.txt"
 
-  // 9600 baud is the default rate for the Ultimate GPS
-  //--------------------------------------------------------------
-  //gps code currently not in use
-//  GPSSerial.begin(9600);
-//  GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
-//  GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);
-//  GPS.sendCommand(PGCMD_ANTENNA);
-//  delay(1000);
-//  GPSSerial.println(PMTK_Q_RELEASE);
- //--------------------------------------------------------------
   unsigned status;
   status = bme.begin();
-  //if (status) {
-
- // }
 
   launchzeroalt = (bme.readPressure() / 100.0F);
   correcttime = millis();
@@ -166,7 +149,7 @@ void setup() {
   
 }
 
-
+int count = 0;
 
 void loop() {
   timer = millis() - correcttime;
@@ -195,12 +178,13 @@ void loop() {
     Serial.print(accel);
     Serial.print(" Mag=");
     Serial.println(mag);
-
-  //  Serial.println("--");
-  if(accel == 3 ){
+    
+    if(gyro == 3 && mag == 3 && system == 3){
     tone(buzzer, 2000);
     digitalWrite(yellowLED, HIGH);
-  }
+    bno.getCalibration(&system, &gyro, &accel, &mag);
+        }
+  Serial.print(printEventLinearAccelerometerX(&linearAccelData));
   delay(BNO055_SAMPLERATE_DELAY_MS);
   digitalWrite(buzzer, LOW);
   atmo.add((bme.readPressure() / 100.0F) * 0.03);
