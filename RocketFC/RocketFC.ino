@@ -1,11 +1,3 @@
-//#include <I2C.h>
-#include <TeensyThreads.h>
-#include <String.h>
-#include <Wire.h>
-#include <SPI.h>
-#include <InternalTemperature.h>
-
-
 
 //------------------------------------------
 //CORE libraries for hardware interface
@@ -28,36 +20,33 @@
 #include <utility/imumaths.h>
 #include <EEPROM.h>
 //------------------------------------------
-//------------------------------------------
-//GPS Libraries and definitions
-#define GPSSerial Serial1
-#define GPSECHO false
-#include <Adafruit_GPS.h>
-Adafruit_GPS GPS(&GPSSerial);
-//------------------------------------------
+int recordtime = 10000; //time in milliseconds you want to record data.
+
+
 uint32_t timer = millis();
 
 const int buzzer = 32;
 const int yellowLED = 30;
 const int redLED = 31;
-
+int correcttime;
 float humidity;
 float pressure;
 float temperature;
-
+unsigned long delayTime;
+double launchzeroalt;
 uint16_t BNO055_SAMPLERATE_DELAY_MS = 100;
 const int chipSelect = BUILTIN_SDCARD;
+File outputFile;
+
 //------------------------------------------
 //declares BME object
 Adafruit_BME280 bme;
 //instantiates BNO055
 Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28);
 //------------------------------------------
-unsigned long delayTime;
-double launchzeroalt;
-File myFile;
 
-//todo
+
+
 //Declare Json Object, add names of different lists to be sent to SD file.
 StaticJsonDocument<430000> totallist;
 JsonArray atmo = totallist.createNestedArray("atmo");
@@ -67,13 +56,10 @@ JsonArray linear = totallist.createNestedArray("linear");
 JsonArray magnet = totallist.createNestedArray("magnet");
 JsonArray angvel = totallist.createNestedArray("angvel");
 
-int correcttime;
-int recordtime = 122000; //time in milliseconds you want to record data.
-void setup() {
-  //------------------------------------------
-  //instantiate
 
-  //------------------------------------------
+
+void setup() {
+
   pinMode(buzzer, OUTPUT);
   pinMode(redLED, OUTPUT);
   pinMode(yellowLED, OUTPUT);
@@ -92,7 +78,6 @@ void setup() {
   Serial.println("Complete!");
 
   delay(1000);
-  bno.setExtCrystalUse(true);
 
   Serial.print("Initializing SD card...");//Preps SD card for writing
 
@@ -101,14 +86,15 @@ void setup() {
     return;
   }
   Serial.println("initialization done.");
-  //while (!Serial);
-  myFile = SD.open("t.txt", FILE_WRITE);//change field 1 to whatever you want to name the file.. "example.txt"
+  outputFile = SD.open("t.txt", FILE_WRITE);// replace string value with the name of your file.
 
   unsigned status;
   status = bme.begin();
 
   launchzeroalt = (bme.readPressure() / 100.0F);
   correcttime = millis();
+//------------------------------------------
+//------------------------------------------
 
   int eeAddress = 0;
   long bnoID;
@@ -133,9 +119,9 @@ void setup() {
     {
         Serial.println("\nFound Calibration for this sensor in EEPROM.");
         eeAddress += sizeof(long);
-        EEPROM.get(eeAddress, calibrationData);
+        EEPROM.get(eeAddress, calibrationData); //get calibration data from BNO055 ROM.
 
-        displaySensorOffsets(calibrationData);
+        //displaySensorOffsets(calibrationData);
 
         Serial.println("\n\nRestoring Calibration data to the BNO055...");
         bno.setSensorOffsets(calibrationData);
@@ -144,47 +130,29 @@ void setup() {
         foundCalib = true;
     }
     bno.setExtCrystalUse(true);
-
-
-  
+//------------------------------------------
+//------------------------------------------
 }
 
 int count = 0;
 
 void loop() {
   timer = millis() - correcttime;
-  sensors_event_t orientationData , angVelocityData , linearAccelData, magnetometerData, accelerometerData, gravityData;// declare variables to assign values to from the bno055
+  sensors_event_t orientation, angVelo, linearAccel, magnetometer, accelerometer;// declare variables to assign values to from the bno055
+  bno.getEvent(&angVelo, Adafruit_BNO055::VECTOR_GYROSCOPE);
+  bno.getEvent(&orientation, Adafruit_BNO055::VECTOR_EULER);
+  bno.getEvent(&magnetometer, Adafruit_BNO055::VECTOR_MAGNETOMETER);
+  bno.getEvent(&linearAccel, Adafruit_BNO055::VECTOR_LINEARACCEL);
+  bno.getEvent(&accelerometer, Adafruit_BNO055::VECTOR_ACCELEROMETER);
   
-  bno.getEvent(&orientationData, Adafruit_BNO055::VECTOR_EULER);
-  bno.getEvent(&angVelocityData, Adafruit_BNO055::VECTOR_GYROSCOPE);
-  bno.getEvent(&linearAccelData, Adafruit_BNO055::VECTOR_LINEARACCEL);
-  bno.getEvent(&magnetometerData, Adafruit_BNO055::VECTOR_MAGNETOMETER);
-  bno.getEvent(&accelerometerData, Adafruit_BNO055::VECTOR_ACCELEROMETER);
-  bno.getEvent(&gravityData, Adafruit_BNO055::VECTOR_GRAVITY);
-
-  int8_t boardTemp = bno.getTemp();
-  //  Serial.println();
-  //  Serial.print(F("temperature: "));
-  // Serial.println(boardTemp);
 
   uint8_t system, gyro, accel, mag = 0;
-  bno.getCalibration(&system, &gyro, &accel, &mag);
-    Serial.println();
-    Serial.print("Calibration: Sys=");
-    Serial.print(system);
-    Serial.print(" Gyro=");
-    Serial.print(gyro);
-    Serial.print(" Accel=");
-    Serial.print(accel);
-    Serial.print(" Mag=");
-    Serial.println(mag);
-    
     if(gyro == 3 && mag == 3 && system == 3){
     tone(buzzer, 2000);
     digitalWrite(yellowLED, HIGH);
     bno.getCalibration(&system, &gyro, &accel, &mag);
         }
-  Serial.print(printEventLinearAccelerometerX(&linearAccelData));
+  //Serial.print(printEventLinearAccelerometerX(&linearAccel));
   delay(BNO055_SAMPLERATE_DELAY_MS);
   digitalWrite(buzzer, LOW);
   atmo.add((bme.readPressure() / 100.0F) * 0.03);
@@ -192,33 +160,33 @@ void loop() {
   atmo.add(bme.readAltitude(launchzeroalt) * 3.28084);
   Serial.println(bme.readAltitude(launchzeroalt) * 3.28084);
   atmo.add(timer);
-  orient.add(printEventOrientationX(&orientationData));
-  orient.add(printEventOrientationY(&orientationData));
-  orient.add(printEventOrientationZ(&orientationData));
+  orient.add(printEventOrientationX(&orientation));
+  orient.add(printEventOrientationY(&orientation));
+  orient.add(printEventOrientationZ(&orientation));
   orient.add(timer);
-  linear.add(printEventLinearAccelerometerX(&linearAccelData));
-  linear.add(printEventLinearAccelerometerY(&linearAccelData));
-  linear.add(printEventLinearAccelerometerZ(&linearAccelData));
+  linear.add(printEventLinearAccelerometerX(&linearAccel));
+  linear.add(printEventLinearAccelerometerY(&linearAccel));
+  linear.add(printEventLinearAccelerometerZ(&linearAccel));
   linear.add(timer);
-  magnet.add(printEventMagneticX(&magnetometerData));
-  magnet.add(printEventMagneticY(&magnetometerData));
-  magnet.add(printEventMagneticZ(&magnetometerData));
+  magnet.add(printEventMagneticX(&magnetometer));
+  magnet.add(printEventMagneticY(&magnetometer));
+  magnet.add(printEventMagneticZ(&magnetometer));
   magnet.add(timer);
-  angvel.add(printRotationVectorX(&angVelocityData));
-  angvel.add(printRotationVectorY(&angVelocityData));
-  angvel.add(printRotationVectorZ(&angVelocityData));
+  angvel.add(printRotationVectorX(&angVelo));
+  angvel.add(printRotationVectorY(&angVelo));
+  angvel.add(printRotationVectorZ(&angVelo));
   angvel.add(timer);
-  accel2.add(printEventAccelerometerX(&accelerometerData));
-  accel2.add(printEventAccelerometerY(&accelerometerData));
-  accel2.add(printEventAccelerometerZ(&accelerometerData));
+  accel2.add(printEventAccelerometerX(&accelerometer));
+  accel2.add(printEventAccelerometerY(&accelerometer));
+  accel2.add(printEventAccelerometerZ(&accelerometer));
   accel2.add(timer);
 
-  if (myFile) {                         //code to write to microssd
+  if (outputFile) {                         //code to write to microssd
     if (millis() - correcttime >= recordtime) {
 
       Serial.println("Writing to test.txt...");
-      serializeJsonPretty(totallist, myFile);
-      myFile.close();
+      serializeJsonPretty(totallist, outputFile);
+      outputFile.close();
       Serial.println("done.");
 
       while (millis() - correcttime >= recordtime) {
@@ -353,53 +321,60 @@ double printRotationVectorZ(sensors_event_t* event) {
     return z;
   }
 }
-
-void displaySensorOffsets(const adafruit_bno055_offsets_t &calibData)
-{
-    Serial.print("Accelerometer: ");
-    Serial.print(calibData.accel_offset_x); Serial.print(" ");
-    Serial.print(calibData.accel_offset_y); Serial.print(" ");
-    Serial.print(calibData.accel_offset_z); Serial.print(" ");
-
-    Serial.print("\nGyro: ");
-    Serial.print(calibData.gyro_offset_x); Serial.print(" ");
-    Serial.print(calibData.gyro_offset_y); Serial.print(" ");
-    Serial.print(calibData.gyro_offset_z); Serial.print(" ");
-
-    Serial.print("\nMag: ");
-    Serial.print(calibData.mag_offset_x); Serial.print(" ");
-    Serial.print(calibData.mag_offset_y); Serial.print(" ");
-    Serial.print(calibData.mag_offset_z); Serial.print(" ");
-
-    Serial.print("\nAccel Radius: ");
-    Serial.print(calibData.accel_radius);
-
-    Serial.print("\nMag Radius: ");
-    Serial.print(calibData.mag_radius);
-}
-void displayCalStatus(void)
-{
-    /* Get the four calibration values (0..3) */
-    /* Any sensor data reporting 0 should be ignored, */
-    /* 3 means 'fully calibrated" */
-    uint8_t system, gyro, accel, mag;
-    system = gyro = accel = mag = 0;
-    bno.getCalibration(&system, &gyro, &accel, &mag);
-
-    /* The data should be ignored until the system calibration is > 0 */
-    Serial.print("\t");
-    if (!system)
-    {
-        Serial.print("! ");
-    }
-
-    /* Display the individual values */
-    Serial.print("Sys:");
-    Serial.print(system, DEC);
-    Serial.print(" G:");
-    Serial.print(gyro, DEC);
-    Serial.print(" A:");
-    Serial.print(accel, DEC);
-    Serial.print(" M:");
-    Serial.print(mag, DEC);
-}
+//------------------------------------------
+//------------------------------------------
+//------------------------------------------
+//------------------------------------------
+//------------------------------------------
+//------------------------------------------
+//------------------------------------------ following is debug prints for testing, not written by me.
+//
+//void displaySensorOffsets(const adafruit_bno055_offsets_t &calibData)
+//{
+//    Serial.print("Accelerometer: ");
+//    Serial.print(calibData.accel_offset_x); Serial.print(" ");
+//    Serial.print(calibData.accel_offset_y); Serial.print(" ");
+//    Serial.print(calibData.accel_offset_z); Serial.print(" ");
+//
+//    Serial.print("\nGyro: ");
+//    Serial.print(calibData.gyro_offset_x); Serial.print(" ");
+//    Serial.print(calibData.gyro_offset_y); Serial.print(" ");
+//    Serial.print(calibData.gyro_offset_z); Serial.print(" ");
+//
+//    Serial.print("\nMag: ");
+//    Serial.print(calibData.mag_offset_x); Serial.print(" ");
+//    Serial.print(calibData.mag_offset_y); Serial.print(" ");
+//    Serial.print(calibData.mag_offset_z); Serial.print(" ");
+//
+//    Serial.print("\nAccel Radius: ");
+//    Serial.print(calibData.accel_radius);
+//
+//    Serial.print("\nMag Radius: ");
+//    Serial.print(calibData.mag_radius);
+//}
+//void displayCalStatus(void)
+//{
+//    /* Get the four calibration values (0..3) */
+//    /* Any sensor data reporting 0 should be ignored, */
+//    /* 3 means 'fully calibrated" */
+//    uint8_t system, gyro, accel, mag;
+//    system = gyro = accel = mag = 0;
+//    bno.getCalibration(&system, &gyro, &accel, &mag);
+//
+//    /* The data should be ignored until the system calibration is > 0 */
+//    Serial.print("\t");
+//    if (!system)
+//    {
+//        Serial.print("! ");
+//    }
+//
+//    /* Display the individual values */
+//    Serial.print("Sys:");
+//    Serial.print(system, DEC);
+//    Serial.print(" G:");
+//    Serial.print(gyro, DEC);
+//    Serial.print(" A:");
+//    Serial.print(accel, DEC);
+//    Serial.print(" M:");
+//    Serial.print(mag, DEC);
+//}
