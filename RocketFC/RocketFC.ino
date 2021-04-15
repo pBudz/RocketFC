@@ -20,10 +20,10 @@
 #include <utility/imumaths.h>
 #include <EEPROM.h>
 //------------------------------------------
-int recordtime = 10000; //time in milliseconds you want to record data.
+int recordtime = 210000; //time in milliseconds you want to record data.
 
 
-uint32_t timer = millis();
+int timer = millis();
 
 const int buzzer = 32;
 const int yellowLED = 30;
@@ -34,7 +34,7 @@ float pressure;
 float temperature;
 unsigned long delayTime;
 double launchzeroalt;
-uint16_t BNO055_SAMPLERATE_DELAY_MS = 100;
+int BNO055_SAMPLERATE_DELAY_MS = 100;
 const int chipSelect = BUILTIN_SDCARD;
 File outputFile;
 
@@ -52,9 +52,7 @@ StaticJsonDocument<430000> totallist;
 JsonArray atmo = totallist.createNestedArray("atmo");
 JsonArray accel2 = totallist.createNestedArray("accel2");
 JsonArray orient = totallist.createNestedArray("orient");
-JsonArray linear = totallist.createNestedArray("linear");
 JsonArray magnet = totallist.createNestedArray("magnet");
-JsonArray angvel = totallist.createNestedArray("angvel");
 
 
 
@@ -75,7 +73,7 @@ void setup() {
     Serial.print("no BNO055 detected");
     while (1);
   }
-  Serial.println("Complete!");
+  Serial.println("~BNO055 Found~");
 
   delay(1000);
 
@@ -138,11 +136,12 @@ int count = 0;
 
 void loop() {
   timer = millis() - correcttime;
-  sensors_event_t orientation, angVelo, linearAccel, magnetometer, accelerometer;// declare variables to assign values to from the bno055
-  bno.getEvent(&angVelo, Adafruit_BNO055::VECTOR_GYROSCOPE);
+  double heading;
+  sensors_event_t orientation, magnetometer, accelerometer;// declare variables to assign values to from the bno055
+//  bno.getEvent(&angVelo, Adafruit_BNO055::VECTOR_GYROSCOPE);
   bno.getEvent(&orientation, Adafruit_BNO055::VECTOR_EULER);
   bno.getEvent(&magnetometer, Adafruit_BNO055::VECTOR_MAGNETOMETER);
-  bno.getEvent(&linearAccel, Adafruit_BNO055::VECTOR_LINEARACCEL);
+//  bno.getEvent(&linearAccel, Adafruit_BNO055::VECTOR_LINEARACCEL);
   bno.getEvent(&accelerometer, Adafruit_BNO055::VECTOR_ACCELEROMETER);
   
 
@@ -157,25 +156,25 @@ void loop() {
   digitalWrite(buzzer, LOW);
   atmo.add((bme.readPressure() / 100.0F) * 0.03);
   atmo.add(bme.readTemperature() * 9 / 5 + 32);
+  atmo.add(bme.readHumidity());
   atmo.add(bme.readAltitude(launchzeroalt) * 3.28084);
-  Serial.println(bme.readAltitude(launchzeroalt) * 3.28084);
-  atmo.add(timer);
+  //Serial.println(bme.readAltitude(launchzeroalt) * 3.28084);
+  //atmo.add(timer);
   orient.add(printEventOrientationX(&orientation));
   orient.add(printEventOrientationY(&orientation));
   orient.add(printEventOrientationZ(&orientation));
-  orient.add(timer);
-  linear.add(printEventLinearAccelerometerX(&linearAccel));
-  linear.add(printEventLinearAccelerometerY(&linearAccel));
-  linear.add(printEventLinearAccelerometerZ(&linearAccel));
-  linear.add(timer);
-  magnet.add(printEventMagneticX(&magnetometer));
-  magnet.add(printEventMagneticY(&magnetometer));
-  magnet.add(printEventMagneticZ(&magnetometer));
-  magnet.add(timer);
-  angvel.add(printRotationVectorX(&angVelo));
-  angvel.add(printRotationVectorY(&angVelo));
-  angvel.add(printRotationVectorZ(&angVelo));
-  angvel.add(timer);
+  //orient.add(timer);
+
+  heading = atan2 (printEventMagneticY(&magnetometer),printEventMagneticX(&magnetometer)) * 180 / PI;
+  if(heading < 0){
+    heading = heading * -2;
+  }
+  magnet.add(heading);
+  //magnet.add(timer);
+//  angvel.add(printRotationVectorX(&angVelo));
+//  angvel.add(printRotationVectorY(&angVelo));
+//  angvel.add(printRotationVectorZ(&angVelo));
+  //angvel.add(timer);
   accel2.add(printEventAccelerometerX(&accelerometer));
   accel2.add(printEventAccelerometerY(&accelerometer));
   accel2.add(printEventAccelerometerZ(&accelerometer));
@@ -248,30 +247,30 @@ double printEventOrientationZ(sensors_event_t* event) {
     return z;
   }
 }
-double printEventLinearAccelerometerX(sensors_event_t* event) {
-  double x = -1000000; //dumb values, easy to spot problem
-  if (event->type == SENSOR_TYPE_LINEAR_ACCELERATION) {
-    x = event->acceleration.x;
-    // Serial.print(x);
-    return x;
-  }
-}
-double printEventLinearAccelerometerY(sensors_event_t* event) {
-  double y = -1000000; //dumb values, easy to spot problem
-  if (event->type == SENSOR_TYPE_LINEAR_ACCELERATION) {
-    y = event->acceleration.y;
-    //  Serial.print(y);
-    return y;
-  }
-}
-double printEventLinearAccelerometerZ(sensors_event_t* event) {
-  double z = -1000000; //dumb values, easy to spot problem
-  if (event->type == SENSOR_TYPE_LINEAR_ACCELERATION) {
-    z = event->acceleration.z;
-    // Serial.print(z);
-    return z;
-  }
-}
+//double printEventLinearAccelerometerX(sensors_event_t* event) {
+//  double x = -1000000; //dumb values, easy to spot problem
+//  if (event->type == SENSOR_TYPE_LINEAR_ACCELERATION) {
+//    x = event->acceleration.x;
+//    // Serial.print(x);
+//    return x;
+//  }
+//}
+//double printEventLinearAccelerometerY(sensors_event_t* event) {
+//  double y = -1000000; //dumb values, easy to spot problem
+//  if (event->type == SENSOR_TYPE_LINEAR_ACCELERATION) {
+//    y = event->acceleration.y;
+//    //  Serial.print(y);
+//    return y;
+//  }
+//}
+//double printEventLinearAccelerometerZ(sensors_event_t* event) {
+//  double z = -1000000; //dumb values, easy to spot problem
+//  if (event->type == SENSOR_TYPE_LINEAR_ACCELERATION) {
+//    z = event->acceleration.z;
+//    // Serial.print(z);
+//    return z;
+//  }
+//}
 double printEventMagneticX(sensors_event_t* event) {
   double x = -1000000; //dumb values, easy to spot problem
   if (event->type == SENSOR_TYPE_MAGNETIC_FIELD) {
@@ -297,30 +296,30 @@ double printEventMagneticZ(sensors_event_t* event) {
   }
 }
 
-double printRotationVectorX(sensors_event_t* event) {
-  double x = -1000000; //dumb values, easy to spot problem
-  if (event->type == SENSOR_TYPE_ROTATION_VECTOR) {
-    x = event->magnetic.x;
-    //  Serial.print(x);
-    return x;
-  }
-}
-double printRotationVectorY(sensors_event_t* event) {
-  double y = -1000000; //dumb values, easy to spot problem
-  if (event->type == SENSOR_TYPE_ROTATION_VECTOR) {
-    y = event->magnetic.y;
-    // Serial.print(y);
-    return y;
-  }
-}
-double printRotationVectorZ(sensors_event_t* event) {
-  double z = -1000000; //dumb values, easy to spot problem
-  if (event->type == SENSOR_TYPE_ROTATION_VECTOR) {
-    z = event->magnetic.z;
-    //  Serial.print(z);
-    return z;
-  }
-}
+//double printRotationVectorX(sensors_event_t* event) {
+//  double x = -1000000; //dumb values, easy to spot problem
+//  if (event->type == SENSOR_TYPE_ROTATION_VECTOR) {
+//    x = event->magnetic.x;
+//    //  Serial.print(x);
+//    return x;
+//  }
+//}
+//double printRotationVectorY(sensors_event_t* event) {
+//  double y = -1000000; //dumb values, easy to spot problem
+//  if (event->type == SENSOR_TYPE_ROTATION_VECTOR) {
+//    y = event->magnetic.y;
+//    // Serial.print(y);
+//    return y;
+//  }
+//}
+//double printRotationVectorZ(sensors_event_t* event) {
+//  double z = -1000000; //dumb values, easy to spot problem
+//  if (event->type == SENSOR_TYPE_ROTATION_VECTOR) {
+//    z = event->magnetic.z;
+//    //  Serial.print(z);
+//    return z;
+//  }
+//}
 //------------------------------------------
 //------------------------------------------
 //------------------------------------------
