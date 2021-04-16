@@ -25,7 +25,6 @@ int recordtime = 210000; //time in milliseconds you want to record data.
 
 int timer = millis();
 
-const int buzzer = 32;
 const int yellowLED = 30;
 const int redLED = 31;
 int correcttime;
@@ -58,7 +57,6 @@ JsonArray magnet = totallist.createNestedArray("magnet");
 
 void setup() {
 
-  pinMode(buzzer, OUTPUT);
   pinMode(redLED, OUTPUT);
   pinMode(yellowLED, OUTPUT);
 
@@ -119,8 +117,6 @@ void setup() {
         eeAddress += sizeof(long);
         EEPROM.get(eeAddress, calibrationData); //get calibration data from BNO055 ROM.
 
-        //displaySensorOffsets(calibrationData);
-
         Serial.println("\n\nRestoring Calibration data to the BNO055...");
         bno.setSensorOffsets(calibrationData);
 
@@ -137,23 +133,21 @@ int count = 0;
 void loop() {
   timer = millis() - correcttime;
   double heading;
+  Serial.println();
+  displayCalStatus();
   sensors_event_t orientation, magnetometer, accelerometer;// declare variables to assign values to from the bno055
 //  bno.getEvent(&angVelo, Adafruit_BNO055::VECTOR_GYROSCOPE);
   bno.getEvent(&orientation, Adafruit_BNO055::VECTOR_EULER);
   bno.getEvent(&magnetometer, Adafruit_BNO055::VECTOR_MAGNETOMETER);
 //  bno.getEvent(&linearAccel, Adafruit_BNO055::VECTOR_LINEARACCEL);
   bno.getEvent(&accelerometer, Adafruit_BNO055::VECTOR_ACCELEROMETER);
-  
-
   uint8_t system, gyro, accel, mag = 0;
+  bno.getCalibration(&system, &gyro, &accel, &mag);
     if(gyro == 3 && mag == 3 && system == 3){
-    tone(buzzer, 2000);
     digitalWrite(yellowLED, HIGH);
-    bno.getCalibration(&system, &gyro, &accel, &mag);
         }
   //Serial.print(printEventLinearAccelerometerX(&linearAccel));
   delay(BNO055_SAMPLERATE_DELAY_MS);
-  digitalWrite(buzzer, LOW);
   atmo.add((bme.readPressure() / 100.0F) * 0.03);
   atmo.add(bme.readTemperature() * 9 / 5 + 32);
   atmo.add(bme.readHumidity());
@@ -170,6 +164,7 @@ void loop() {
     heading = heading * -2;
   }
   magnet.add(heading);
+  //Serial.println(heading);
   //magnet.add(timer);
 //  angvel.add(printRotationVectorX(&angVelo));
 //  angvel.add(printRotationVectorY(&angVelo));
@@ -351,29 +346,29 @@ double printEventMagneticZ(sensors_event_t* event) {
 //    Serial.print("\nMag Radius: ");
 //    Serial.print(calibData.mag_radius);
 //}
-//void displayCalStatus(void)
-//{
-//    /* Get the four calibration values (0..3) */
-//    /* Any sensor data reporting 0 should be ignored, */
-//    /* 3 means 'fully calibrated" */
-//    uint8_t system, gyro, accel, mag;
-//    system = gyro = accel = mag = 0;
-//    bno.getCalibration(&system, &gyro, &accel, &mag);
-//
-//    /* The data should be ignored until the system calibration is > 0 */
-//    Serial.print("\t");
-//    if (!system)
-//    {
-//        Serial.print("! ");
-//    }
-//
-//    /* Display the individual values */
-//    Serial.print("Sys:");
-//    Serial.print(system, DEC);
-//    Serial.print(" G:");
-//    Serial.print(gyro, DEC);
-//    Serial.print(" A:");
-//    Serial.print(accel, DEC);
-//    Serial.print(" M:");
-//    Serial.print(mag, DEC);
-//}
+void displayCalStatus(void)
+{
+    /* Get the four calibration values (0..3) */
+    /* Any sensor data reporting 0 should be ignored, */
+    /* 3 means 'fully calibrated" */
+    uint8_t system, gyro, accel, mag;
+    system = gyro = accel = mag = 0;
+    bno.getCalibration(&system, &gyro, &accel, &mag);
+
+    /* The data should be ignored until the system calibration is > 0 */
+    Serial.print("\t");
+    if (!system)
+    {
+        Serial.print("! ");
+    }
+
+    /* Display the individual values */
+    Serial.print("Sys:");
+    Serial.print(system, DEC);
+    Serial.print(" G:");
+    Serial.print(gyro, DEC);
+    Serial.print(" A:");
+    Serial.print(accel, DEC);
+    Serial.print(" M:");
+    Serial.print(mag, DEC);
+}
