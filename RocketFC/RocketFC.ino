@@ -139,13 +139,17 @@ void loop() {
   double heading;
   Serial.println();
   displayCalStatus();
+  
   sensors_event_t orientation, magnetometer, accelerometer;// declare variables to assign values to from the bno055
 //  bno.getEvent(&angVelo, Adafruit_BNO055::VECTOR_GYROSCOPE);
   bno.getEvent(&orientation, Adafruit_BNO055::VECTOR_EULER);
   bno.getEvent(&magnetometer, Adafruit_BNO055::VECTOR_MAGNETOMETER);
 //  bno.getEvent(&linearAccel, Adafruit_BNO055::VECTOR_LINEARACCEL);
   bno.getEvent(&accelerometer, Adafruit_BNO055::VECTOR_ACCELEROMETER);
+  
   uint8_t system, gyro, accel, mag = 0;
+
+  
   bno.getCalibration(&system, &gyro, &accel, &mag);
     if(gyro == 3 && mag == 3 && system == 3){
     digitalWrite(yellowLED, HIGH);
@@ -196,7 +200,7 @@ void loop() {
 
 }
 //--------------------------------------------------------------
-// follow functions use previously declared sensor events to find what TYPE of event is detected. if the type is of the the- 
+// following functions use previously declared sensor events to find what TYPE of event is detected. if the type is of the the- 
 // -type specified in the function, the function reports the appropriate data.
 double printEventAccelerometerX(sensors_event_t* event) {
   double x = -1000000; //dumb values, easy to spot problem
