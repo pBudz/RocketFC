@@ -27,6 +27,7 @@ int timer = millis();
 
 const int yellowLED = 30;
 const int redLED = 31;
+const int blueLED = 29;
 int correcttime;
 float humidity;
 float pressure;
@@ -59,6 +60,7 @@ void setup() {
 
   pinMode(redLED, OUTPUT);
   pinMode(yellowLED, OUTPUT);
+  pinMode(blueLED, OUTPUT);
 
   Serial.begin(9600);
   Serial.begin(115200);
@@ -69,6 +71,7 @@ void setup() {
   {
 
     Serial.print("no BNO055 detected");
+    digitalWrite(blueLED, HIGH);
     while (1);
   }
   Serial.println("~BNO055 Found~");
@@ -79,7 +82,8 @@ void setup() {
 
   if (!SD.begin(chipSelect)) {
     Serial.println("initialization failed!");
-    return;
+    digitalWrite(blueLED, HIGH);
+    while (1);
   }
   Serial.println("initialization done.");
   outputFile = SD.open("t.txt", FILE_WRITE);// replace string value with the name of your file.
